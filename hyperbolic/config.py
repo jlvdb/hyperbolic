@@ -35,6 +35,7 @@ class LoadConfig:
         self.verbose = args.verbose
         # get the commandline arguments
         self.infile = args.infile
+        self.hdu = args.hdu
         self.outfile = args.outfile
         self.fields = args.fields
         # read the configuration file
@@ -54,7 +55,7 @@ class LoadConfig:
 
     def load_input(self):
         logger.info(f"reading data from {self.infile}")
-        return apd.read_auto(self.infile)
+        return apd.read_fits(self.infile, hdu=self.hdu)
 
     def get_fields(self, df):
         try:
