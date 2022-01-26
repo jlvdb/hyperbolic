@@ -15,6 +15,9 @@ parser.add_argument(
     "infile", metavar="path",
     help="input FITS file")
 parser.add_argument(
+    "--hdu", type=int, default=1,
+    help="FITS HDU index to read (default: %(default)s)")
+parser.add_argument(
     "outfile", metavar="path",
     help="output path for data statistics")
 
