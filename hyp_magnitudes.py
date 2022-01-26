@@ -1,20 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 
-import astropandas as apd
 import numpy as np
-import pandas as pd
 
 import hyperbolic
 import hyperbolic.config
-
-
-def KiDS_aware_error_colname(mag_col_name):
-    if mag_col_name.startswith("HMAG_"):
-        error_colname = f"HMAGERR_{mag_col_name[5:]}"
-    else:
-        error_colname = mag_col_name + hyperbolic.config.error_suffix
-    return error_colname
+import hyperbolic.plots
 
 
 parser = argparse.ArgumentParser(
@@ -40,6 +31,9 @@ parser.add_argument(
 parser.add_argument(
     "--b-global", action='store_true',
     help="compute the smoothing paramter globally for all filters")
+parser.add_argument(
+    "--plot", action='store_true',
+    help="add a PDF file with summary plots alongside the output file")
 
 group = parser.add_argument_group("help")
 group.add_argument(
@@ -62,7 +56,6 @@ if __name__ == "__main__":
     fields = config.get_fields(data)
     fluxes = config.get_fluxes(data)
     errors = config.get_errors(data)
-    magnitudes = config.get_magnitudes(data)
 
     # compute smoothing factor
     global_stats = all_stats.groupby(
@@ -95,8 +88,17 @@ if __name__ == "__main__":
 
         # add data to catalogue
         key_mag = config.outname[filt]
-        key_mag_err = KiDS_aware_error_colname(key_mag)
-        data[key_mag] = np.where(hyp_mag, is_good, -99.0)
-        data[key_mag_err] = np.where(hyp_mag_err, is_good, -99.0)
+        key_mag_err = config.KiDS_aware_error_colname(key_mag)
+        data[key_mag] = np.where(
+            is_good, hyp_mag, -99.0).astype(np.float32)
+        data[key_mag_err] = np.where(
+            is_good, hyp_mag_err, -99.0).astype(np.float32)
+
+    if config.plot:
+        with hyperbolic.plots.Plotter(config) as plotter:
+            if config.fields is not None:
+                plotter.plot_b(all_stats)
+            plotter.plot_magnitudes(data, stats, b)
+            plotter.plot_colours(data, stats)
 
     config.write_output(data)

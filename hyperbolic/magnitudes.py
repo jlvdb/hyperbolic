@@ -39,6 +39,10 @@ def estimate_b(zp, flux_error):
     return np.sqrt(pogson) * np.exp(-zp / pogson) * flux_error
 
 
+def compute_classic_magnitude(flux, zeropoint):
+    return -pogson * np.log(flux) + zeropoint
+
+
 def compute_magnitude(norm_flux, b):
     return -pogson * (np.arcsinh(0.5 * norm_flux / b) + np.log(b))
 

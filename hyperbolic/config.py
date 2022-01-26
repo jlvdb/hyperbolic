@@ -108,10 +108,19 @@ class LoadConfigMagnitudes(LoadConfig):
         # check the additional commandline arguments
         self.stats = args.stats
         self.b_global = args.b_global
+        self.plot = args.plot
 
     def load_stats(self):
         logger.info(f"reading statistics from {self.stats}")
         return pd.read_csv(self.stats, index_col=[Keys.filter, Keys.field])
+
+    @staticmethod
+    def KiDS_aware_error_colname(mag_col_name):
+        if mag_col_name.startswith("HMAG_"):
+            error_colname = f"HMAGERR_{mag_col_name[5:]}"
+        else:
+            error_colname = mag_col_name + error_suffix
+        return error_colname
 
     def write_output(self, data):
         logger.info(f"writing table data to {self.outfile}")
