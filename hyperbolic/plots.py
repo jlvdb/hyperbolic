@@ -1,5 +1,4 @@
 import os
-from cv2 import magnitude
 
 import numpy as np
 from matplotlib import pyplot as plt
