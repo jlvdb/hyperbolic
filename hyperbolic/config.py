@@ -1,22 +1,28 @@
 import argparse
 import json
-import warnings
 
+import astropandas as apd
 import numpy as np
+import pandas as pd
+
+from . import Keys
+from .logger import logger
 
 
-pogson = 2.5 * np.log10(np.e)
+error_suffix = "_err"
 
 
 class DumpAction(argparse.Action):
+
     def __call__(self, parser, namespace, values, option_string=None):
         default = json.dumps({
             "filter_name (e.g. 'r')": {
-                "outname": "# output column name (suffix for errors: _err)",
+                "outname": "# output column name (suffix appended for "
+                          f"errors: {error_suffix})",
                 "flux": "# name of colum with flux",
                 "error": "# name of column with flux error",
-                "magnitude": "# name of column with magnitudes (ignored if "
-                             "--zeropoint is given)",
+                "magnitude": "# name of column with magnitudes (value ignored "
+                             "if --zeropoint is given)",
             }
         }, indent=4)
         print(default)
@@ -26,13 +32,13 @@ class DumpAction(argparse.Action):
 class LoadConfig:
 
     def __init__(self, args):
-        # check the commandline arguments
+        self.verbose = args.verbose
+        # get the commandline arguments
         self.infile = args.infile
         self.outfile = args.outfile
         self.fields = args.fields
-        self.zeropoint = args.zeropoint
         # read the configuration file
-        print(f"reading: {args.config}")
+        logger.info(f"reading configuration from {args.config}")
         with open(args.config) as f:
             data = json.load(f)
             self.filters = list(data.keys())
@@ -44,8 +50,11 @@ class LoadConfig:
                 fname: config["error"] for fname, config in data.items()}
             self.magnitude = {
                 fname: config["magnitude"] for fname, config in data.items()}
-        if self.zeropoint is not None:
-            self.magnitude = None
+        self.zeropoint = None  # default, overwritten by subclasses
+
+    def load_input(self):
+        logger.info(f"reading data from {self.infile}")
+        return apd.read_auto(self.infile)
 
     def get_fields(self, df):
         try:
@@ -78,19 +87,32 @@ class LoadConfig:
             raise KeyError(f"magnitude column {e} not found")
 
 
-def ref_flux_from_zp(m_0):
-    return np.exp(m_0 / pogson)
+class LoadConfigSmooting(LoadConfig):
+
+    def __init__(self, args):
+        super().__init__(args)
+        # check the additional commandline arguments
+        self.zeropoint = args.zeropoint
+        if self.zeropoint is not None:
+            self.magnitude = None
+
+    def write_output(self, data):
+        logger.info(f"writing statistics to {self.outfile}")
+        data.to_csv(self.outfile)
 
 
-def zp_from_ref_flux(flux):
-    return pogson * np.log(flux)
+class LoadConfigMagnitudes(LoadConfig):
 
+    def __init__(self, args):
+        super().__init__(args)
+        # check the additional commandline arguments
+        self.stats = args.stats
+        self.b_global = args.b_global
 
-def estimate_zp(magnitude, flux):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        return magnitude + pogson * np.log(flux)
+    def load_stats(self):
+        logger.info(f"reading statistics from {self.stats}")
+        return pd.read_csv(self.stats, index_col=[Keys.filter, Keys.field])
 
-
-def estimate_b(zp, flux_error):
-    return np.sqrt(pogson) * np.exp(-zp / pogson) * flux_error
+    def write_output(self, data):
+        logger.info(f"writing table data to {self.outfile}")
+        apd.to_fits(data, self.outfile)
