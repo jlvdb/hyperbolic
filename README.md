@@ -21,11 +21,13 @@ generated with
 
 An example usage might look like this:
 
-   hyp_smoothing.py -v \
-      --field pointing_identifier_column_name \
-      -c configration.json \
-      input_catalogue.fits \
-      field_statistics.csv
+```shell
+hyp_smoothing.py -v \
+   --field pointing_identifier_column_name \
+   -c configration.json \
+   input_catalogue.fits \
+   field_statistics.csv
+```
 
 The second part of the code, `hyp_magnitudes.py`, computes the actual value for
 the smoothing parameter and computes hyperbolic magnitudes consistently. The
@@ -34,13 +36,15 @@ magnitudes are provided in the configuration file) based on the
 `field_statistics.csv` computed in the first step. An example usage might look
 like this:
 
-   hyp_magnitudes.py -v \
-      --field pointing_identifier_column_name \
-      -c configration.json \
-      -s field_statistics.csv \
-      --plot \
-      input_catalogue.fits \
-      output_catalogue_with_hyperb_mags.fits
+```shell
+hyp_magnitudes.py -v \
+   --field pointing_identifier_column_name \
+   -c configration.json \
+   -s field_statistics.csv \
+   --plot \
+   input_catalogue.fits \
+   output_catalogue_with_hyperb_mags.fits
+```
 
 It is also possible to apply the smoothing parameter from an external data
 cataloge. In this case, the field statistics of the external data should be
@@ -103,3 +107,8 @@ with uncertainty $\Delta x = \Delta f / f_0$ based on these global values for
 $b$. In each pointing we calcualte the flux $f_0 = e^{m_0 / a}$ from the
 zeropoint $m_0$ (see above) to compensate variations in the observing
 conditions.
+
+## Maintainers
+
+[Jan Luca van den Busch](jlvdb@astro.rub.de),
+Ruhr-University Bochum, Astronomical Institute.
