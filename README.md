@@ -54,59 +54,63 @@ computed with `hyp_smoothing.py`. The output .csv file can be provided to
 ## Implementation
 
 Hyperbolical magnitudes approximate the classical magnitudes at high signal-to-
-noise, but have linear behaviour around flux values of $f=0$ and are therefore
-well defined if $f<0$. Lupton et al. (1999) suggests to define hyperbolical
-magnitudes in terms of the normalised flux $x = f / f_0$ as
-$$ \mu = a \left(\mathrm{arcsinh}\left(\frac{x}{2b}\right) + \log{b}\right) , $$
-which has an uncertainty of
-$$ \Delta\mu = \frac{a \, \Delta x}{\sqrt{x^2 + 4 b^2}} $$
-with $a = 2.5 \log_{10}(e) \approx 1.086$. In this parameterisation $f_0$ is
-the flux of an object with magnitude zero and $m_0 = a \log{f_0}$ is the
-corresponding photometric zeropoint.
+noise, but have linear behaviour around flux values of f=0 and are therefore
+well defined if f<0. Lupton et al. (1999) suggest to define hyperbolical
+magnitudes in terms of the normalised flux x=f/f0 as
 
-The free parameter $b$ is a smoothing factor that determines the transition
-between linear and logarithmic behaviour of $\mu$. Lupton et al. (1999) show
-that the optimal value for the smoothing parameter is
-$$ b = \sqrt{a} \Delta x , $$
+    mu = a * [arcsinh(0.5*x/b) + log(b)] ,
+
+with a=2.5log10(e). In this parameterisation f0 is the flux of an object with
+magnitude zero and m0=a*log(f0) is the corresponding photometric zeropoint.
+
+The free parameter b is a smoothing factor that determines the transition
+between linear and logarithmic behaviour of mu. Lupton et al. (1999) show that
+the optimal value for the smoothing parameter is
+
+    b = sqrt(a) Dx ,
+
 i.e. is determined by the variance of the normalised flux.
 
 When applied to observational data, the hyperbolic magnitudes can be written as
-$$ \mu = a \left(\mathrm{arcsinh}\left(\frac{f}{2b^\prime}\right) + \log{b^\prime}\right) + m_0 , $$
-where $f$ is the measured flux and
-$$ b^\prime = f_0 b = \sqrt{a} \Delta f $$
-is determined from the variance of the measured fluxes. In this formulation,
-$b^\prime$ depends on the photometric zeropoint and can be converted according
-to
-$$ b^\prime_1 = b^\prime_2 \exp{\left(\frac{m_{0,1} - m_{0,2}}{a}\right)} , $$
-where $b^\prime_1$ and $b^\prime_2$ are the smoothing parameters for
-observations with zeropoints $m_{0,1}$ and $m_{0,2}$.
+
+    mu = a * [arcsinh(0.5*f/b') + log(b')] + m0 ,
+
+where f is the measured flux and
+
+    b' = f0 * b = sqrt(a) * Df
+
+is determined from the variance of the measured fluxes. In this formulation, b
+depends on the photometric zeropoint.
 
 ### Estimating the smoothing parameter
 
 For a given set of flux measurements the hyperbolic magnitudes can be computed
-once an appropriate smoothing parameter is chosen. We determine $b$ globally
-from the whole survey data for each photometric band:
+once an appropriate smoothing parameter is chosen. This determines b globally
+from the complete input data and for each photometric filter specified in the
+configuration file:
 
-1. We compute the photometric zeropoint $m_0$ in each telescope pointing by
-   comparing the individual flux measurements $f_i$ and magnitudes $m_i$, since
-   the latter already include a number of corrections, such as extinction and
-   stellar locus regressions:
-   $$ m_0 = \mathrm{median}(m_i + a \log{f_i}) $$
-2. We compute the smoothing parameter for each pointing from the zeropoint
+1. It computes the photometric zeropoint m0 in each telescope pointing by
+   comparing the individual flux measurements fi and magnitudes mi, since the
+   latter may include a number of corrections, such as extinction or stellar
+   locus regressions:
+
+       m0 = median(mi + a*log(fi))
+
+2. It computes the smoothing parameter for each pointing from the zeropoint
    according to
-   $$ b = \frac{b^\prime}{f_0} = \frac{\sqrt{a} \, \Delta f}{f_0} = \sqrt{a} \, e^{-m_0 / a} \Delta f , $$
-   where $\Delta f = \mathrm{median}(f_i)$ is the median of the measured flux
-   errors.
-3. We compute the global value for $b$ in each band by taking the median of all
-   pointings.
+   
+       b = b' / f0 = sqrt(a) * Df / f0 = sqrt(a) * e^(-m0/a) * Df ,
+
+   where Df=median(fi) is the median of the measured flux errors.
+3. It computes the global value for b in each filter by taking the median of
+   all pointings.
 
 ### Computation
 
-We compute the hyperbolical magnitudes from their normalised flux $x=f/f_0$
-with uncertainty $\Delta x = \Delta f / f_0$ based on these global values for
-$b$. In each pointing we calcualte the flux $f_0 = e^{m_0 / a}$ from the
-zeropoint $m_0$ (see above) to compensate variations in the observing
-conditions.
+The code computes the hyperbolical magnitudes from their normalised flux
+x=f/f0 with uncertainty Dx=Df/f0 based on these global values for b. In each
+pointing it calcualtes the flux f0=e^(m0/a) from the zeropoint m0 (see above)
+to compensate variations in the observing conditions.
 
 ## Maintainers
 
