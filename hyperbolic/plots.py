@@ -190,6 +190,10 @@ class Plotter:
             # select all observed objects and create a sparse sampling
             ax = axes.flatten()[i]
             is_good = (errors[filt1] > 0.0) & (errors[filt2] > 0.0)
+            m1 = magnitudes[filt1]
+            m2 = magnitudes[filt2]
+            is_good &= np.isfinite(m1) & (m1 < 90.0)
+            is_good &= np.isfinite(m2) & (m2 < 90.0)
             # add classical colours
             idx_sort = np.argsort(magnitudes[filt1][is_good])
             mag1 = magnitudes[filt1][is_good].to_numpy()[idx_sort]
