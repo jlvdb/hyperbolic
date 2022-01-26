@@ -62,20 +62,21 @@ if __name__ == "__main__":
             hyperbolic.Keys.field: fields,
             "flux error": np.where(is_good, errors[filt], np.nan)})
         if config.zeropoint is None:
-            df["zeropoint"] = hyperbolic.estimate_zp(
+            df[hyperbolic.Keys.zp] = hyperbolic.estimate_zp(
                 np.where(is_good, magnitudes[filt], np.nan),
                 np.where(is_good, fluxes[filt], np.nan))
         else:
-            df["zeropoint"] = config.zeropoint
+            df[hyperbolic.Keys.zp] = config.zeropoint
         stats = df.groupby(hyperbolic.Keys.field).agg(np.nanmedian)
         stats.index.name = hyperbolic.Keys.field
         stats[hyperbolic.Keys.ref_flux] = \
-            hyperbolic.ref_flux_from_zp(stats["zeropoint"])
+            hyperbolic.ref_flux_from_zp(stats[hyperbolic.Keys.zp])
 
         # compute b
         stats[hyperbolic.Keys.b] = hyperbolic.estimate_b(
-            stats["zeropoint"], stats["flux error"])
-        stats["b absolute"] = stats["ref. flux"] * stats[hyperbolic.Keys.b]
+            stats[hyperbolic.Keys.zp], stats["flux error"])
+        stats[hyperbolic.Keys.b_abs] = \
+            stats["ref. flux"] * stats[hyperbolic.Keys.b]
 
         # collect statistics
         stats[hyperbolic.Keys.filter] = filt
