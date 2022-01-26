@@ -107,12 +107,18 @@ class LoadConfigMagnitudes(LoadConfig):
         super().__init__(args)
         # check the additional commandline arguments
         self.stats = args.stats
+        self.smoothing = args.smoothing
         self.b_global = args.b_global
         self.plot = args.plot
 
     def load_stats(self):
         logger.info(f"reading statistics from {self.stats}")
         return pd.read_csv(self.stats, index_col=[Keys.filter, Keys.field])
+
+    def load_smoothing(self):
+        fpath = self.smoothing if self.smoothing is not None else self.stats
+        logger.info(f"reading statistics from {fpath}")
+        return pd.read_csv(fpath, index_col=[Keys.filter, Keys.field])
 
     @staticmethod
     def KiDS_aware_error_colname(mag_col_name):

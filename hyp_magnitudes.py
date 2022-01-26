@@ -26,6 +26,10 @@ parser.add_argument(
     "-s", "--stats", required=True,
     help="statistics file genereated with 'hyp_smoothing.py'")
 parser.add_argument(
+    "--smoothing",
+    help="external statistics file genereated with 'hyp_smoothing.py' that is "
+         "used to define the smoothing parameter b")
+parser.add_argument(
     "-f", "--fields",
     help="column name that can uniquely indentify pointings")
 parser.add_argument(
@@ -51,14 +55,15 @@ if __name__ == "__main__":
     config = hyperbolic.config.LoadConfigMagnitudes(parser.parse_args())
     # load the input data
     data = config.load_input()
-    all_stats = config.load_stats()
+    all_stats = config.load_stats()  # for the internal zeropoint corrections
+    smooth_stats = config.load_smoothing()
     # get data columns
     fields = config.get_fields(data)
     fluxes = config.get_fluxes(data)
     errors = config.get_errors(data)
 
-    # compute smoothing factor
-    global_stats = all_stats.groupby(
+    # compute smoothing factor (from external data if --smoothing is provided)
+    global_stats = smooth_stats.groupby(
         hyperbolic.Keys.filter).agg(np.nanmedian)
     global_stats = global_stats.loc[config.filters]  # maintain order (print)
     b = global_stats[[hyperbolic.Keys.b]].copy()
