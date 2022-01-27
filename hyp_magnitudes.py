@@ -2,6 +2,7 @@
 import argparse
 
 import numpy as np
+import pandas as pd
 
 import hyperbolic
 import hyperbolic.config
@@ -9,16 +10,17 @@ import hyperbolic.plots
 
 
 parser = argparse.ArgumentParser(
-    description="...",
+    description="Compute the hyperbolic magnitudes and add them into the "
+                "input data catalogue.",
     add_help=False)
 parser.add_argument(
-    "infile", metavar="path",
+    "infile", metavar="infile",
     help="input FITS file")
 parser.add_argument(
     "--hdu", type=int, default=1,
     help="FITS HDU index to read (default: %(default)s)")
 parser.add_argument(
-    "outfile", metavar="path",
+    "outfile", metavar="outfile",
     help="output path for FITS file with added hyperbolic magnitudes")
 
 parser.add_argument(
@@ -66,15 +68,14 @@ if __name__ == "__main__":
     errors = config.get_errors(data)
 
     # compute smoothing factor (from external data if --smoothing is provided)
-    global_stats = smooth_stats.groupby(
+    b = smooth_stats[hyperbolic.Keys.b].groupby(
         hyperbolic.Keys.filter).agg(np.nanmedian)
-    global_stats = global_stats.loc[config.filters]  # maintain order (print)
-    b = global_stats[[hyperbolic.Keys.b]].copy()
     if config.b_global:
-        b[hyperbolic.Keys.b] = np.median(b[hyperbolic.Keys.b])
-    if config.verbose:
-        print(b)
-    b = b.to_dict()[hyperbolic.Keys.b]
+        b[:] = np.median(b)
+    if config.verbose:  # print in nicely looking dataframe
+        _df = pd.DataFrame({hyperbolic.Keys.b: b})
+        print(_df.loc[config.filters])  # maintain usual order
+    b = b.to_dict()
 
     for filt in config.filters:
         hyperbolic.logger.logger.info(f"processing filter {filt}")
