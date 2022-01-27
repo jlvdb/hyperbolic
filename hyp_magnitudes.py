@@ -106,8 +106,10 @@ if __name__ == "__main__":
     if config.plot:
         with hyperbolic.plots.Plotter(config) as plotter:
             if config.fields is not None:
-                plotter.plot_b(all_stats)
-            plotter.plot_magnitudes(data, stats, b)
-            plotter.plot_colours(data, stats)
+                plotter.plot_b(smooth_stats)
+            plotter.plot_magnitudes(data, all_stats, b)
+            plotter.plot_magnitude_distribution(data, all_stats, b)
+            plotter.plot_colour_distribution(data, all_stats)
+            plotter.plot_magdiff(data, all_stats)
 
     config.write_output(data)
