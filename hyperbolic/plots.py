@@ -29,6 +29,18 @@ class SparseSampler:
         return data[self.sparse]
 
 
+def add_left_edge(centers, edges):
+    try:
+        centers = centers.to_numpy()
+    except AttributeError:
+        pass
+    try:
+        edges = edges.to_numpy()
+    except AttributeError:
+        pass
+    return np.append(edges[0], centers)
+
+
 def compute_prediction(sn, b):
     # calculate normalised flux from relation of b and S/N
     norm_flux = sn * b / np.sqrt(hyperbolic.pogson)
@@ -69,7 +81,7 @@ class Plotter:
 
     scatter_style = {
         "edgecolor": "none", "s": 3, "marker": ".",
-        "alpha": 0.3, "rasterized": True}
+        "alpha": 0.1, "rasterized": True}
 
     def __init__(self, config):
         self.config = config
@@ -216,34 +228,36 @@ class Plotter:
         errors = self.config.get_errors(data)
         magnitudes = self.get_magnitudes(data, stats)
         # make figure
-        bins = np.linspace(15, 30, 50)
+        bins = np.arange(5, 40, 0.2)
+        xlims = PlotLims()
         fig, axes = self.make_figure()
         for i, filt in enumerate(self.config.filters):
             # select all observed objects and create a sparse sampling
             ax = axes.flatten()[i]
-            is_good = (errors[filt] > 0.0) & (magnitudes[filt] < 90.0)
+            is_good = errors[filt] > 0.0
+            has_mag = magnitudes[filt] < 90.0
             # add classical magnitudes
-            hand1 = ax.hist(
-                magnitudes[filt][is_good], bins, log=True,
-                color="C0", histtype="step")[-1][0]
+            c, _, patches1 = ax.hist(
+                magnitudes[filt][is_good & has_mag], bins,
+                log=True, color="C0", histtype="step")
             # add hyperbolic magnitudes
             key = self.config.outname[filt]
-            hand2 = ax.hist(
-                data[key][is_good], bins, log=True,
-                color="C3", histtype="step")[-1][0]
+            c, _, patches2 = ax.hist(
+                data[key][is_good], bins,
+                log=True, color="C3", histtype="step")
             # decorate
-            hand0 = ax.axvline(
-                x=hyperbolic.compute_magnitude(0.0, b[filt]),
-                color="k", lw=0.7, ls="--")
+            zeroflux = hyperbolic.compute_magnitude(0.0, b[filt])
+            hand0 = ax.axvline(x=zeroflux, color="k", lw=0.7, ls="--")
+            xlims.update(data[key][is_good].min(), zeroflux + 5)
             ax.annotate(
                 filt, (0.05, 0.95), xycoords="axes fraction",
                 ha="left", va="top")
-            ax.set_xlim(bins[0], bins[-1])
+            ax.set_xlim(*xlims.get())
         fig_add_xlabel(axes, "Magnitude")
         fig_add_ylabel(axes, "Frequency")
         # add legend and fix layout
         fig.legend(
-            handles=[hand0, hand1, hand2],
+            handles=[hand0, patches1[0], patches2[0]],
             labels=["zero-flux magnitude", "classical", "hyperbolic"],
             ncol=3, frameon=False)
         fig.tight_layout()
@@ -260,18 +274,19 @@ class Plotter:
         fig, axes = self.make_figure(n_plot_offset=-1)
         for i, (filt1, filt2) in enumerate(
                 zip(self.config.filters[:-1], self.config.filters[1:])):
-            # select all observed objects and create a sparse sampling
             ax = axes.flatten()[i]
+            # select all observed objects and create a sparse sampling
+            mag1 = magnitudes[filt1]
+            mag2 = magnitudes[filt2]
             is_good = (errors[filt1] > 0.0) & (errors[filt2] > 0.0)
-            m1 = magnitudes[filt1]
-            m2 = magnitudes[filt2]
-            is_good &= np.isfinite(m1) & (m1 < 90.0)
-            is_good &= np.isfinite(m2) & (m2 < 90.0)
+            has_color = np.isfinite(mag1) & (mag1 < 90.0)
+            has_color &= np.isfinite(mag2) & (mag2 < 90.0)
+            mask = is_good & has_color
             # add classical colours
-            idx_sort = np.argsort(magnitudes[filt1][is_good])
-            mag1 = magnitudes[filt1][is_good].to_numpy()[idx_sort]
-            mag2 = magnitudes[filt2][is_good].to_numpy()[idx_sort]
-            colours = (mag1 - mag2)
+            mag1 = magnitudes[filt1][mask].to_numpy()
+            mag2 = magnitudes[filt2][mask].to_numpy()
+            idx_sort = np.argsort(mag1)
+            colours = mag1[idx_sort] - mag2[idx_sort]
             hand1a = ax.hist(
                 colours[:len(colours)//4], bins,
                 color="C0", alpha=0.3, zorder=-1)[-1][0]
@@ -281,10 +296,10 @@ class Plotter:
             # add hyperbolic colours
             key_mag1 = self.config.outname[filt1]
             key_mag2 = self.config.outname[filt2]
-            idx_sort = np.argsort(data[key_mag1][is_good])
-            mag1 = data[key_mag1][is_good].to_numpy()[idx_sort]
-            mag2 = data[key_mag2][is_good].to_numpy()[idx_sort]
-            colours = (mag1 - mag2)
+            mag1 = data[key_mag1][mask].to_numpy()
+            mag2 = data[key_mag2][mask].to_numpy()
+            idx_sort = np.argsort(mag1)
+            colours = (mag1[idx_sort] - mag2[idx_sort])
             hand2a = ax.hist(
                 colours[:len(colours)//4], bins,
                 color="C3", alpha=0.3, zorder=-1)[-1][0]
@@ -318,9 +333,8 @@ class Plotter:
         errors = self.config.get_errors(data)
         magnitudes = self.get_magnitudes(data, stats)
         # make figure
-        fig, axes = self.make_figure()
+        fig, axes = self.make_figure(sharey=False)
         xlims = PlotLims()
-        ylims = PlotLims()
         for i, filt in enumerate(self.config.filters):
             # select all observed objects and create a sparse sampling
             ax = axes.flatten()[i]
@@ -337,22 +351,26 @@ class Plotter:
                 sparse.apply(df["mag"]), sparse.apply(df["diff"]),
                 **self.scatter_style)
             # plot statistics
-            bins = np.linspace(*np.percentile(df["mag"], q=[0.5, 99.5]), 25)
+            bins = np.linspace(*np.percentile(df["mag"], q=[0.5, 99.5]), 20)
             centers = (bins[1:] + bins[:-1]) / 2.0
             stats = df.groupby(pd.cut(df["mag"], bins)).agg([
                 np.median, scipy.stats.median_abs_deviation])
             y = stats["diff"]["median"]
             ylow = y - stats["diff"]["median_abs_deviation"]
             yhigh = y + stats["diff"]["median_abs_deviation"]
-            ax.plot(centers, y, color="k")
-            ax.plot(centers, ylow, color="k", ls="--", lw=0.7)
-            ax.plot(centers, yhigh, color="k", ls="--", lw=0.7)
+            ax.plot(
+                add_left_edge(centers, bins), add_left_edge(y, y),
+                color="k", lw=0.7)
+            ax.plot(
+                add_left_edge(centers, bins), add_left_edge(ylow, ylow),
+                color="k", ls="--", lw=0.7)
+            ax.plot(
+                add_left_edge(centers, bins), add_left_edge(yhigh, yhigh),
+                color="k", ls="--", lw=0.7)
             # decorate
             xlims.update(bins[0], bins[-1])
-            ylims.update(lower=np.percentile(df["diff"], q=2.5))
-            ylims.update(upper=min(y.max(), -2*ylims.lower))
-            ax.set_xlim(*xlims.get())
-            ax.set_ylim(*ylims.get())
+            y_lower = min(-0.1, np.percentile(df["diff"], q=2.5))
+            ax.set_ylim(y_lower, min(y.max(), 3*np.abs(y_lower)))
             ax.annotate(
                 filt, (0.1, 0.95), xycoords="axes fraction",
                 ha="left", va="top")

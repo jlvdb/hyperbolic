@@ -127,7 +127,7 @@ class LoadConfigSmooting(LoadConfig):
     def add_column_and_update(self, data, values, filt, which):
         key = self.KiDS_aware_colname(self.get(filt, which))
         logger.info(f"adding {which} column: {key}")
-        data[key] = values
+        data[key] = values.astype(np.float32)  # default 64 bit is overkill
         self.set(filt, which, key)
 
     def load_adapt(self):
