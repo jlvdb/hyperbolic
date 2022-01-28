@@ -107,7 +107,7 @@ if __name__ == "__main__":
             config.add_column_and_update(data, errors[filt], filt, "error")
             # compute the classical adapted magnitudes
             zeropoint = hyperbolic.fields_to_source(
-                stats[hyperbolic.Keys.zp], fields, index=fluxes[fields])
+                stats[hyperbolic.Keys.zp], fields, index=fluxes[fields].index)
             if magnitudes[filt] is None:
                 fill_mag, fill_err = None, None
             else:
