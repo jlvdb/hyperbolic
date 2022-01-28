@@ -79,12 +79,17 @@ class PlotLims:
 
 class Plotter:
 
+    _magnitudes = None
+
     scatter_style = {
         "edgecolor": "none", "s": 3, "marker": ".",
         "alpha": 0.1, "rasterized": True}
 
-    def __init__(self, config):
+    def __init__(self, config, data, stats, b):
         self.config = config
+        self.data = data
+        self.stats = stats
+        self.b = b
 
     def make_figure(self, size=2.5, sharex=True, sharey=True, n_plot_offset=0):
         n_plots = len(self.config.filters) + n_plot_offset
@@ -118,63 +123,55 @@ class Plotter:
     def add_fig(self, fig):
         self._backend.savefig(fig)
 
-    def plot_b(self, stats):
+    def plot_b(self, smoothing):
         # collect the b values
         b_median = {}
         b_all = {}
-        for filt, data in stats.groupby(Keys.filter):
+        for filt, data in smoothing.groupby(Keys.filter):
             b_all[filt] = data[Keys.b_abs].to_numpy()
             b_median[filt] = np.nanmedian(b_all[filt])
         # make figure
         fig, axes = self.make_figure(sharex=False)
         for i, filt in enumerate(self.config.filters):
             ax = axes.flatten()[i]
-            # compute a KDE of the distribution
-            kde = scipy.stats.gaussian_kde(b_all[filt])
-            # compute automatic x-range from sample percentile and bandwidth
-            bw = kde.covariance_factor() * b_all[filt].std()
-            xlims = np.percentile(b_all[filt], q=[0.5, 99.5])
-            samples = np.linspace(xlims[0] - 10*bw, xlims[1] + 10*bw, 100)
-            y = kde(samples)
-            hand1 = ax.plot(samples, y / y.max())[0]
+            _, bins, patches = ax.hist(b_all[filt], histtype="step")
             hand2 = ax.axvline(x=b_median[filt], color="k")
             # decorate
-            ax.set_xlim(*xlims)
             ax.annotate(
                 filt, (0.95, 0.95), xycoords="axes fraction",
                 ha="right", va="top")
         fig_add_xlabel(axes, "Smoothing $b^\prime$")
         # add legend and fix layout
         fig.legend(
-            handles=[hand1, hand2], labels=["fields", "median (fiducial)"],
+            handles=[patches[0], hand2],
+            labels=["fields", "median (fiducial)"],
             ncol=2, frameon=False)
         fig.tight_layout()
         fig.subplots_adjust(top=0.94)
         self.add_fig(fig)
 
-    def get_magnitudes(self, data, stats):
-        magnitudes = self.config.get_magnitudes(data)
+    def get_magnitudes(self):
+        if self._magnitudes is not None:
+            return self._magnitudes
+        magnitudes = self.config.get_magnitudes(self.data)
         # compute classic magnitudes as fallback from fluxes and zeropoints
         if magnitudes is None:
-            fields = self.config.get_fields(data)
-            fluxes = self.config.get_fluxes(data)
+            fields = self.config.get_fields(self.data)
+            fluxes = self.config.get_fluxes(self.data)
             magnitudes = {}
             for filt in self.config.filters:
-                zeropoint = stats[Keys.zp].loc[fields]
+                zeropoint = self.stats[Keys.zp].loc[fields]
                 zeropoint.index = fluxes[filt].index
                 magnitudes = compute_classic_magnitude(fluxes[filt], zeropoint)
+        self._magnitudes = magnitudes
         return magnitudes
 
-
-    def plot_magnitudes(self, data, stats, b):
+    def plot_magnitudes(self):
         # get the required data
-        fluxes = self.config.get_fluxes(data)
-        errors = self.config.get_errors(data)
-        magnitudes = self.get_magnitudes(data, stats)
+        fluxes = self.config.get_fluxes(self.data)
+        errors = self.config.get_errors(self.data)
+        magnitudes = self.get_magnitudes()
         # make figure
-        style = {
-            "edgecolor": "none", "s": 3, "marker": ".",
-            "alpha": 0.3, "rasterized": True}
         xlims = [-3, 33]
         ylims = PlotLims()
         fig, axes = self.make_figure()
@@ -187,24 +184,25 @@ class Plotter:
                   sparse.apply(errors[filt], mask=is_good))
             # add prediction
             SN_theory = np.linspace(*xlims, 50)
-            mag_theory = compute_prediction(SN_theory, b[filt])
+            mag_theory = compute_prediction(SN_theory, self.b[filt])
             hand_theory = ax.plot(
                 SN_theory, mag_theory, color="k", lw=0.7, ls="--", zorder=2)[0]
             ylims.update(  # update limits from y=mag(-b) to y=max(min)
                 lower=mag_theory.min(),
-                upper=hyperbolic.compute_magnitude(-b[filt], b[filt]))
+                upper=hyperbolic.compute_magnitude(
+                    -self.b[filt], self.b[filt]))
             # add classical magnitudes
             mags = sparse.apply(magnitudes[filt], mask=is_good)
             hand1 = ax.scatter(
                 SN, mags, c="C0", zorder=-1, **self.scatter_style)
             # add hyperbolic magnitudes
             key_mag = self.config.outname[filt]
-            mags = sparse.apply(data[key_mag], mask=is_good)
+            mags = sparse.apply(self.data[key_mag], mask=is_good)
             hand2 = ax.scatter(
                 SN, mags, c="C3", **self.scatter_style)
             # decorate
             ax.axhline(
-                y=hyperbolic.compute_magnitude(0.0, b[filt]),
+                y=hyperbolic.compute_magnitude(0.0, self.b[filt]),
                 color="k", lw=0.4)
             ax.axvline(x=0.0, color="k", lw=0.25)
             ax.annotate(
@@ -223,10 +221,10 @@ class Plotter:
         fig.subplots_adjust(top=0.94)
         self.add_fig(fig)
 
-    def plot_magnitude_distribution(self, data, stats, b):
+    def plot_magnitude_distribution(self):
         # get the required data
-        errors = self.config.get_errors(data)
-        magnitudes = self.get_magnitudes(data, stats)
+        errors = self.config.get_errors(self.data)
+        magnitudes = self.get_magnitudes()
         # make figure
         bins = np.arange(5, 40, 0.2)
         xlims = PlotLims()
@@ -243,12 +241,12 @@ class Plotter:
             # add hyperbolic magnitudes
             key = self.config.outname[filt]
             c, _, patches2 = ax.hist(
-                data[key][is_good], bins,
+                self.data[key][is_good], bins,
                 log=True, color="C3", histtype="step")
             # decorate
-            zeroflux = hyperbolic.compute_magnitude(0.0, b[filt])
+            zeroflux = hyperbolic.compute_magnitude(0.0, self.b[filt])
             hand0 = ax.axvline(x=zeroflux, color="k", lw=0.7, ls="--")
-            xlims.update(data[key][is_good].min(), zeroflux + 5)
+            xlims.update(self.data[key][is_good].min(), zeroflux + 5)
             ax.annotate(
                 filt, (0.05, 0.95), xycoords="axes fraction",
                 ha="left", va="top")
@@ -265,10 +263,10 @@ class Plotter:
         self.add_fig(fig)
 
 
-    def plot_colour_distribution(self, data, stats):
+    def plot_colour_distribution(self):
         # get the required data
-        errors = self.config.get_errors(data)
-        magnitudes = self.get_magnitudes(data, stats)
+        errors = self.config.get_errors(self.data)
+        magnitudes = self.get_magnitudes()
         # make figure
         bins = np.linspace(-1.5, 2.5, 50)
         fig, axes = self.make_figure(n_plot_offset=-1)
@@ -296,8 +294,8 @@ class Plotter:
             # add hyperbolic colours
             key_mag1 = self.config.outname[filt1]
             key_mag2 = self.config.outname[filt2]
-            mag1 = data[key_mag1][mask].to_numpy()
-            mag2 = data[key_mag2][mask].to_numpy()
+            mag1 = self.data[key_mag1][mask].to_numpy()
+            mag2 = self.data[key_mag2][mask].to_numpy()
             idx_sort = np.argsort(mag1)
             colours = (mag1[idx_sort] - mag2[idx_sort])
             hand2a = ax.hist(
@@ -328,10 +326,10 @@ class Plotter:
         fig.subplots_adjust()
         self.add_fig(fig)
 
-    def plot_magdiff(self, data, stats):
+    def plot_magdiff(self):
         # get the required data
-        errors = self.config.get_errors(data)
-        magnitudes = self.get_magnitudes(data, stats)
+        errors = self.config.get_errors(self.data)
+        magnitudes = self.get_magnitudes()
         # make figure
         fig, axes = self.make_figure(sharey=False)
         xlims = PlotLims()
@@ -343,7 +341,7 @@ class Plotter:
             key_mag = self.config.outname[filt]
             df = pd.DataFrame({
                 "mag": magnitudes[filt][is_good],
-                "hyp": data[key_mag][is_good]})
+                "hyp": self.data[key_mag][is_good]})
             df["diff"] = df["mag"] - df["hyp"]
             sparse = SparseSampler(np.count_nonzero(is_good))
             # add the magnitude difference
@@ -368,9 +366,10 @@ class Plotter:
                 add_left_edge(centers, bins), add_left_edge(yhigh, yhigh),
                 color="k", ls="--", lw=0.7)
             # decorate
-            xlims.update(bins[0], bins[-1])
-            y_lower = max(-0.1, np.percentile(df["diff"], q=5))
-            ax.set_ylim(y_lower, min(y.max(), 3*np.abs(y_lower)))
+            zeroflux = hyperbolic.compute_magnitude(0.0, self.b[filt])
+            xlims.update(bins[0], zeroflux)
+            ax.set_xlim(*xlims.get())
+            ax.set_ylim(-0.2, 0.6)
             ax.annotate(
                 filt, (0.1, 0.95), xycoords="axes fraction",
                 ha="left", va="top")

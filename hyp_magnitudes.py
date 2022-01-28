@@ -104,12 +104,11 @@ if __name__ == "__main__":
             is_good, hyp_mag_err, -99.0).astype(np.float32)
 
     if config.plot:
-        with hyperbolic.plots.Plotter(config) as plotter:
+        with hyperbolic.plots.Plotter(config, data, all_stats, b) as plotter:
             if config.fields is not None:
                 plotter.plot_b(smooth_stats)
-            plotter.plot_magnitudes(data, all_stats, b)
-            plotter.plot_magnitude_distribution(data, all_stats, b)
-            plotter.plot_colour_distribution(data, all_stats)
-            plotter.plot_magdiff(data, all_stats)
-
+            plotter.plot_magnitudes()
+            plotter.plot_magnitude_distribution()
+            plotter.plot_colour_distribution()
+            plotter.plot_magdiff()
     config.write_output(data)
