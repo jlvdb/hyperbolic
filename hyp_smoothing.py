@@ -99,6 +99,8 @@ if __name__ == "__main__":
                 fluxes[filt], errors[filt], fields, magnitudes[filt],
                 config.zeropoint, is_good)
             stats = hyperbolic.fill_missing_stats(stats)
+            zeropoint = hyperbolic.fields_to_source(
+                stats[hyperbolic.Keys.zp], fields, index=fluxes[filt].index)
             # updated the flux and flux error and add to input data table
             fluxes[filt], errors[filt] = hyperbolic.adapt_flux(
                 fluxes[filt], errors[filt], stats, adapt_errors[filt],
@@ -106,8 +108,6 @@ if __name__ == "__main__":
             config.add_column_and_update(data, fluxes[filt], filt, "flux")
             config.add_column_and_update(data, errors[filt], filt, "error")
             # compute the classical adapted magnitudes
-            zeropoint = hyperbolic.fields_to_source(
-                stats[hyperbolic.Keys.zp], fields, index=fluxes[fields].index)
             if magnitudes[filt] is None:
                 fill_mag, fill_err = None, None
             else:

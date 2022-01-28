@@ -369,7 +369,7 @@ class Plotter:
                 color="k", ls="--", lw=0.7)
             # decorate
             xlims.update(bins[0], bins[-1])
-            y_lower = min(-0.1, np.percentile(df["diff"], q=2.5))
+            y_lower = max(-0.1, np.percentile(df["diff"], q=5))
             ax.set_ylim(y_lower, min(y.max(), 3*np.abs(y_lower)))
             ax.annotate(
                 filt, (0.1, 0.95), xycoords="axes fraction",
