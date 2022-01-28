@@ -10,6 +10,13 @@ from .logger import logger
 pogson = 2.5 * np.log10(np.e)
 
 
+def fields_to_source(per_field_data, fields, index=None):
+    per_source_data = per_field_data.loc[fields]
+    if index is not None:
+        per_source_data.index = index
+    return per_source_data
+
+
 def ref_flux_from_zp(m_0):
     return np.exp(m_0 / pogson)
 
@@ -32,8 +39,20 @@ def estimate_b(zp, flux_error):
     return np.sqrt(pogson) * np.exp(-zp / pogson) * flux_error
 
 
-def compute_classic_magnitude(flux, zeropoint):
-    return -pogson * np.log(flux) + zeropoint
+def compute_classic_magnitude(flux, zeropoint, fill=None):
+    if fill is None:
+        fill = np.nan
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        mag = np.where(flux > 0.0, -pogson * np.log(flux) + zeropoint, fill)
+    return mag
+
+
+def compute_classic_magnitude_error(flux, flux_error, fill=None):
+    if fill is None:
+        fill = np.nan
+    mag_err = np.where(flux > 0.0, pogson * flux_error / flux, fill)
+    return mag_err
 
 
 def compute_magnitude(norm_flux, b):
@@ -102,8 +121,8 @@ def adapt_flux(flux, error, stats, adapt_error, fields, is_good=None):
         n_unchanged = np.count_nonzero(~is_modified)
         logger.warn(f"flux in {n_unchanged} fields too large to be adapted")
     # compute standard deviation for each object
-    add_sigma = np.sqrt(add_variance).loc[fields]
-    add_sigma.index = flux.index
+    add_sigma = fields_to_source(
+        np.sqrt(add_variance), fields, index=flux.index)
     # updated the flux and flux error
     new_flux = np.where(
         is_good, np.random.normal(flux, add_sigma), flux)

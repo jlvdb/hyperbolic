@@ -105,6 +105,27 @@ if __name__ == "__main__":
                 fields, is_good)
             config.add_column_and_update(data, fluxes[filt], filt, "flux")
             config.add_column_and_update(data, errors[filt], filt, "error")
+            # compute the classical adapted magnitudes
+            zeropoint = hyperbolic.fields_to_source(
+                stats[hyperbolic.Keys.zp], fields, index=fluxes[fields])
+            if magnitudes[filt] is None:
+                fill_mag, fill_err = None, None
+            else:
+                if np.isnan(magnitudes[filt]).any():
+                    fill_mag, fill_err = None, None
+                else:
+                    fill_mag = magnitudes[filt].max()
+                    fill_err = hyperbolic.compute_classic_magnitude(
+                        errors[filt], zeropoint)
+            mag_err = hyperbolic.compute_classic_magnitude_error(
+                fluxes[filt], errors[filt], fill=fill_err)
+            # update the internal values
+            magnitudes[filt] = hyperbolic.compute_classic_magnitude(
+                fluxes[filt], zeropoint, fill=fill_mag)
+            # include them in the input data
+            data[f"mag_classical_adapt_{filt}"] = \
+                magnitudes[filt].astype(np.float32)
+            data[f"magerr_classical_adapt_{filt}"] = mag_err.astype(np.float32)
 
         # compute zeropoint and median flux error
         stats = hyperbolic.compute_flux_stats(

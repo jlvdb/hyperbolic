@@ -84,8 +84,8 @@ if __name__ == "__main__":
         is_good = errors[filt] > 0.0
 
         # compute normalised flux
-        ref_flux = stats[hyperbolic.Keys.ref_flux].loc[fields]
-        ref_flux.index = fluxes[filt].index
+        ref_flux = hyperbolic.fields_to_source(
+            stats[hyperbolic.Keys.ref_flux], fields, index=fluxes[filt].index)
         norm_flux = fluxes[filt] / ref_flux
         norm_flux_err = errors[filt] / ref_flux
 
