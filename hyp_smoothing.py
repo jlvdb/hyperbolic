@@ -129,7 +129,8 @@ if __name__ == "__main__":
 
         # compute zeropoint and median flux error
         stats = hyperbolic.compute_flux_stats(
-            fluxes[filt], errors[filt], fields, magnitudes[filt],
+            fluxes[filt], errors[filt], fields,
+            None if magnitudes is None else magnitudes[filt],
             config.zeropoint, is_good)
         # compute b
         stats[hyperbolic.Keys.b] = hyperbolic.estimate_b(
