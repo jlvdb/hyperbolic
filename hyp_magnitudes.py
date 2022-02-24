@@ -98,10 +98,8 @@ if __name__ == "__main__":
         # add data to catalogue
         key_mag = config.outname[filt]
         key_mag_err = config.KiDS_aware_error_colname(key_mag)
-        data[key_mag] = np.where(
-            is_good, hyp_mag, -99.0).astype(np.float32)
-        data[key_mag_err] = np.where(
-            is_good, hyp_mag_err, -99.0).astype(np.float32)
+        data[key_mag] = np.where(is_good, hyp_mag, -99.0)
+        data[key_mag_err] = np.where(is_good, hyp_mag_err, -99.0)
 
     if config.plot:
         with hyperbolic.plots.Plotter(config, data, all_stats, b) as plotter:

@@ -123,9 +123,8 @@ if __name__ == "__main__":
             magnitudes[filt] = hyperbolic.compute_classic_magnitude(
                 fluxes[filt], zeropoint, fill=fill_mag)
             # include them in the input data
-            data[f"mag_classical_adapt_{filt}"] = \
-                magnitudes[filt].astype(np.float32)
-            data[f"magerr_classical_adapt_{filt}"] = mag_err.astype(np.float32)
+            data[f"mag_classical_adapt_{filt}"] = magnitudes[filt]
+            data[f"magerr_classical_adapt_{filt}"] = mag_err
 
         # compute zeropoint and median flux error
         stats = hyperbolic.compute_flux_stats(
