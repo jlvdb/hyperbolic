@@ -63,7 +63,10 @@ class LoadConfig:
 
     def load_input(self):
         logger.info(f"reading data from {self.infile}")
-        return apd.read_fits(self.infile, hdu=self.hdu)
+        try:
+            return apd.read_auto(self.infile, hdu=self.hdu)
+        except TypeError:
+            return apd.read_auto(self.infile)
 
     def get_fields(self, df):
         try:
@@ -185,4 +188,4 @@ class LoadConfigMagnitudes(LoadConfig):
 
     def write_output(self, data):
         logger.info(f"writing table data to {self.outfile}")
-        apd.to_fits(data, self.outfile)
+        apd.to_auto(data, self.outfile)
