@@ -148,7 +148,7 @@ class LoadConfigSmooting(LoadConfig):
         else:
             fpath = self.adapt_file
         logger.info(f"writing adapted table data to {fpath}")
-        apd.to_fits(data, fpath)
+        apd.to_auto(data, fpath)
 
     def write_stats(self, data):
         logger.info(f"writing statistics to {self.outfile}")
