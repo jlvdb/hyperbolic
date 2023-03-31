@@ -188,7 +188,7 @@ class Plotter:
             hand_theory = ax.plot(
                 SN_theory, mag_theory, color="k", lw=0.7, ls="--", zorder=2)[0]
             ylims.update(  # update limits from y=mag(-b) to y=max(min)
-                lower=1.0,
+                lower=mag_theory.min(),
                 upper=hyperbolic.compute_magnitude(
                     -self.b[filt], self.b[filt]))
             # add classical magnitudes
@@ -228,6 +228,7 @@ class Plotter:
         # make figure
         bins = np.arange(5, 40, 0.2)
         xlims = PlotLims()
+        ylims = PlotLims()
         fig, axes = self.make_figure()
         for i, filt in enumerate(self.config.filters):
             # select all observed objects and create a sparse sampling
@@ -251,6 +252,8 @@ class Plotter:
                 filt, (0.05, 0.95), xycoords="axes fraction",
                 ha="left", va="top")
             ax.set_xlim(*xlims.get())
+            ylims.update(lower=1.0, upper=ax.get_ylim()[1])
+            ax.set_ylim(*ylim.get())
         fig_add_xlabel(axes, "Magnitude")
         fig_add_ylabel(axes, "Frequency")
         # add legend and fix layout
