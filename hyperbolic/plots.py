@@ -253,7 +253,7 @@ class Plotter:
                 ha="left", va="top")
             ax.set_xlim(*xlims.get())
             ylims.update(lower=1.0, upper=ax.get_ylim()[1])
-            ax.set_ylim(*ylim.get())
+            ax.set_ylim(*ylims.get())
         fig_add_xlabel(axes, "Magnitude")
         fig_add_ylabel(axes, "Frequency")
         # add legend and fix layout
