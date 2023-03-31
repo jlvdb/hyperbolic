@@ -188,7 +188,7 @@ class Plotter:
             hand_theory = ax.plot(
                 SN_theory, mag_theory, color="k", lw=0.7, ls="--", zorder=2)[0]
             ylims.update(  # update limits from y=mag(-b) to y=max(min)
-                lower=mag_theory.min(),
+                lower=1.0,
                 upper=hyperbolic.compute_magnitude(
                     -self.b[filt], self.b[filt]))
             # add classical magnitudes
